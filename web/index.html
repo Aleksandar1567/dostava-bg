@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dostava BG</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">Dostava <b>BG</b></div>
+  <div class="clock"><span id="clockBadge" class="badge">—</span> <span id="clock">--:--</span></div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="layout">
+  <section class="panel">
+    <nav class="tabs" role="tablist">
+      <button data-tab="route" class="on">Ruta</button>
+      <button data-tab="packages">Paketi <span id="pkgCount" class="count"></span></button>
+      <button data-tab="sim">Simulacija</button>
+      <button data-tab="notes">Poruke <span id="noteCount" class="count"></span></button>
+      <button data-tab="settings">Podešavanja</button>
+    </nav>
+
+    <!-- ROUTE -->
+    <div class="tab" id="tab-route">
+      <div class="row gap">
+        <button id="btnPlan" class="primary">Optimizuj rutu</button>
+        <button id="btnStart">Kreni</button>
+        <button id="btnGmaps10">Sledećih 10 u Google Maps</button>
+      </div>
+      <div id="nextCard"></div>
+      <div id="routeList"></div>
+      <details id="doneBox"><summary>Završeno <span id="doneCount"></span></summary><div id="doneList"></div></details>
+      <p class="hint" id="trafficNote"></p>
+    </div>
+
+    <!-- PACKAGES -->
+    <div class="tab hidden" id="tab-packages">
+      <div class="card">
+        <h3>Unos paketa</h3>
+        <div class="row gap wrap">
+          <button id="btnCam" class="primary">Skeniraj kamerom</button>
+          <label class="btn">Slikaj / učitaj QR<input id="qrFile" type="file" accept="image/*" capture="environment" hidden></label>
+          <label class="btn">Uvezi CSV<input id="csvFile" type="file" accept=".csv,text/csv" hidden></label>
+        </div>
+        <div id="reader" class="reader hidden"></div>
+        <p class="hint" id="scanMsg">Kamera u pregledaču radi na <code>localhost</code> ili preko https. Sa telefona preko obične http adrese koristi „Slikaj / učitaj QR“ ili Expo aplikaciju.</p>
+        <div class="row gap wrap">
+          <select id="demoSel"></select>
+          <button id="btnDemo">Učitaj test skup</button>
+          <a href="/test-data/rejon-nbg-zemun-100-etikete.html" target="_blank">QR etikete (100)</a>
+          <a href="/test-data/ceo-grad-30-etikete.html" target="_blank">QR etikete (30)</a>
+        </div>
+        <details>
+          <summary>Ručni unos</summary>
+          <form id="manual" class="grid2">
+            <input name="adresa" placeholder="Adresa (ulica i broj)" required>
+            <input name="mesto" placeholder="Mesto / opština">
+            <input name="ime" placeholder="Ime">
+            <input name="tel" placeholder="Telefon">
+            <input name="od" placeholder="Od (npr. 14:00)">
+            <input name="do" placeholder="Do (npr. 16:00)">
+            <button class="primary">Dodaj paket</button>
+          </form>
+        </details>
+      </div>
+      <div id="pinBar" class="pinbar hidden"></div>
+      <div id="pkgList"></div>
+      <div class="row gap"><button id="btnReset" class="danger">Obriši sve (novi dan)</button></div>
+    </div>
+
+    <!-- SIM -->
+    <div class="tab hidden" id="tab-sim">
+      <div class="card">
+        <h3>Simulacija dana</h3>
+        <p>Virtuelni sat kreće od početka smene. Kurir se kreće po pravim putevima. Na nekim deonicama je gužva ili zastoj, a poneki kupac sporo izlazi ili se ne javi. Tako se vidi kako se ETA i obećana vremena menjaju „uživo“.</p>
+        <div class="row gap wrap">
+          <button id="simStart" class="primary">Pokreni od početka smene</button>
+          <button data-step="1">+1 min</button>
+          <button data-step="5">+5 min</button>
+          <button data-step="15">+15 min</button>
+          <button data-step="60">+60 min</button>
+          <button id="simAuto">▶ Auto</button>
+          <button id="simStop">Stvarni sat</button>
+        </div>
+        <p class="hint" id="simInfo"></p>
+      </div>
+      <div class="card"><h3>Dnevnik</h3><ul id="logList" class="log"></ul></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div class="tab hidden" id="tab-notes">
+      <p class="hint">Ovo bi kupci dobili kao SMS/Viber. U MVP-u se ništa ne šalje, poruke su samo zabeležene. Stranica kupca: link na paketu.</p>
+      <ul id="noteList" class="notes"></ul>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tab hidden" id="tab-settings">
+      <form id="settings" class="card grid2">
+        <label>Početak smene<input name="shift_start" placeholder="08:00"></label>
+        <label>Kraj smene<input name="shift_end" placeholder="20:00"></label>
+        <label>Minuta po stanici<input name="service_min" type="number" min="1" max="30"></label>
+        <label>Poruka „izađite“ (min pre)<input name="notify_before_min" type="number" min="1" max="30"></label>
+        <label>Širina obećanog prozora (min)<input name="promise_width_min" type="number" min="15" max="240"></label>
+        <label>Rešavač (sekundi)<input name="solver_seconds" type="number" min="1" max="30"></label>
+        <label class="check"><input name="traffic_profile" type="checkbox"> Profil gužve za Beograd</label>
+        <label class="check"><input name="return_to_depot" type="checkbox"> Povratak u magacin</label>
+        <div class="span2 row gap wrap">
+          <span id="depotLabel" class="hint"></span>
+          <button type="button" id="btnDepot">Postavi magacin klikom na mapu</button>
+        </div>
+        <button class="primary span2">Sačuvaj</button>
+      </form>
+      <p class="hint" id="healthInfo"></p>
+    </div>
+  </section>
+
+  <section class="mapwrap"><div id="map"></div></section>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
