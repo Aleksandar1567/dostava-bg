@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+.pytest_cache/
+
+# generated / downloaded data (rebuild with tools/build_address_index.py)
+backend/data/
+
+# Expo / Node
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.log
+.DS_Store
